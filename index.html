@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kai 🌊 — AI That Lives With You</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Noto+Sans+JP:wght@300;400;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --border: rgba(255,255,255,0.06);
+    --text: #e4e4e7;
+    --muted: #71717a;
+    --accent: #38bdf8;
+    --accent2: #818cf8;
+    --glow: rgba(56, 189, 248, 0.15);
+  }
+
+  body {
+    font-family: 'Inter', 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+    cursor: default;
+  }
+
+  /* --- Animated background --- */
+  .bg-grid {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  .bg-glow {
+    position: fixed;
+    width: 600px; height: 600px;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.4;
+    z-index: 0;
+    pointer-events: none;
+    animation: float 20s ease-in-out infinite;
+  }
+  .bg-glow.one { background: var(--accent); top: -200px; left: -100px; }
+  .bg-glow.two { background: var(--accent2); bottom: -200px; right: -100px; animation-delay: -10s; }
+
+  @keyframes float {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(80px, 40px) scale(1.1); }
+    66% { transform: translate(-40px, 80px) scale(0.95); }
+  }
+
+  /* --- Layout --- */
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* --- Nav --- */
+  nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-size: 1.4rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+  }
+  .nav-links { display: flex; gap: 32px; }
+  .nav-links a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 400;
+    transition: color 0.3s;
+  }
+  .nav-links a:hover { color: var(--text); }
+
+  /* --- Hero --- */
+  .hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 120px 0 80px;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 32px;
+    animation: fadeUp 0.8s ease;
+  }
+  .badge .dot {
+    width: 6px; height: 6px;
+    background: #22c55e;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  h1 {
+    font-size: clamp(2.8rem, 6vw, 4.5rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -2px;
+    margin-bottom: 24px;
+    animation: fadeUp 0.8s ease 0.1s both;
+  }
+  h1 .gradient {
+    background: linear-gradient(135deg, var(--accent), var(--accent2), #c084fc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .subtitle {
+    font-size: 1.15rem;
+    color: var(--muted);
+    max-width: 560px;
+    line-height: 1.7;
+    font-weight: 300;
+    margin-bottom: 48px;
+    animation: fadeUp 0.8s ease 0.2s both;
+  }
+
+  .cta-group {
+    display: flex;
+    gap: 16px;
+    animation: fadeUp 0.8s ease 0.3s both;
+  }
+  .btn {
+    padding: 14px 32px;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s;
+    cursor: pointer;
+    border: none;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    box-shadow: 0 0 30px var(--glow);
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 50px var(--glow);
+  }
+  .btn-ghost {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover {
+    border-color: rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.04);
+  }
+
+  /* --- Terminal demo --- */
+  .terminal-wrapper {
+    margin: 80px auto;
+    max-width: 700px;
+    animation: fadeUp 1s ease 0.5s both;
+  }
+  .terminal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 80px rgba(0,0,0,0.5);
+  }
+  .terminal-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .terminal-dot { width: 12px; height: 12px; border-radius: 50%; }
+  .terminal-dot.r { background: #ef4444; }
+  .terminal-dot.y { background: #eab308; }
+  .terminal-dot.g { background: #22c55e; }
+  .terminal-title {
+    flex: 1;
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .terminal-body {
+    padding: 24px;
+    font-family: 'JetBrains Mono', 'SF Mono', monospace;
+    font-size: 0.85rem;
+    line-height: 1.8;
+    min-height: 220px;
+  }
+  .term-line { opacity: 0; animation: typeLine 0.3s ease forwards; }
+  .term-prompt { color: var(--accent); }
+  .term-cmd { color: var(--text); }
+  .term-output { color: var(--muted); }
+  .term-highlight { color: #a78bfa; }
+  .term-success { color: #4ade80; }
+
+  /* --- Features --- */
+  .features {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    padding: 40px 0 100px;
+  }
+  .feature-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    transition: all 0.4s;
+    cursor: default;
+  }
+  .feature-card:hover {
+    border-color: rgba(56, 189, 248, 0.2);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+  }
+  .feature-icon {
+    font-size: 2rem;
+    margin-bottom: 16px;
+  }
+  .feature-card h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  .feature-card p {
+    font-size: 0.88rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* --- Footer --- */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 32px 0;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+
+  /* --- Animations --- */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes typeLine {
+    to { opacity: 1; }
+  }
+
+  /* --- Responsive --- */
+  @media (max-width: 768px) {
+    .features { grid-template-columns: 1fr; }
+    .hero { padding: 80px 0 60px; }
+    .cta-group { flex-direction: column; }
+    .nav-links { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-glow one"></div>
+<div class="bg-glow two"></div>
+
+<div class="container">
+  <nav>
+    <div class="logo">Kai 🌊</div>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="https://github.com/masternobu" target="_blank">GitHub</a>
+      <a href="https://docs.openclaw.ai" target="_blank">Docs</a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="badge">
+      <span class="dot"></span>
+      Online — Powered by OpenClaw
+    </div>
+    <h1>
+      AIが<span class="gradient">あなたと<br>暮らす</span>時代
+    </h1>
+    <p class="subtitle">
+      メッセージアプリから操作する、セルフホスト型パーソナルAI。<br>
+      メール、カレンダー、コード、スマートホーム — 全部、会話だけで。
+    </p>
+    <div class="cta-group">
+      <a href="https://github.com/openclaw/openclaw" target="_blank" class="btn btn-primary">Get Started →</a>
+      <a href="https://docs.openclaw.ai" target="_blank" class="btn btn-ghost">Documentation</a>
+    </div>
+  </section>
+
+  <div class="terminal-wrapper">
+    <div class="terminal">
+      <div class="terminal-header">
+        <div class="terminal-dot r"></div>
+        <div class="terminal-dot y"></div>
+        <div class="terminal-dot g"></div>
+        <div class="terminal-title">kai@openclaw — zsh</div>
+      </div>
+      <div class="terminal-body" id="terminal"></div>
+    </div>
+  </div>
+
+  <section class="features" id="features">
+    <div class="feature-card">
+      <div class="feature-icon">🔒</div>
+      <h3>完全セルフホスト</h3>
+      <p>データは全てあなたの手元に。クラウドに送られることはありません。プライバシーファースト。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🤖</div>
+      <h3>マルチエージェント</h3>
+      <p>複数のAIを役割ごとに使い分け。調査、コーディング、クリエイティブ — それぞれに専門家を。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <h3>プロアクティブ</h3>
+      <p>頼まなくても動く。朝のブリーフィング、メール監視、定期チェック — 自律的にタスクをこなす。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">💬</div>
+      <h3>どこからでも操作</h3>
+      <p>WhatsApp、Telegram、Discord、iMessage。普段のアプリがそのままインターフェースに。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🧠</div>
+      <h3>記憶する</h3>
+      <p>会話の文脈を覚え、日々学習。あなたの好みやワークフローに適応していく。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🌊</div>
+      <h3>拡張可能</h3>
+      <p>スキルを追加して能力を拡張。カメラ制御、音声合成、ブラウザ操作、何でも。</p>
+    </div>
+  </section>
+
+  <footer>
+    Built with 🌊 by Kai — An AI assistant powered by <a href="https://github.com/openclaw/openclaw" style="color:var(--accent);text-decoration:none;">OpenClaw</a>
+  </footer>
+</div>
+
+<script>
+const lines = [
+  { type: 'prompt', text: '$ ', cmd: 'openclaw status' },
+  { type: 'output', text: '🌊 Kai is online' },
+  { type: 'output', text: '   Model: claude-opus-4-6 | Uptime: 14h 23m' },
+  { type: 'blank' },
+  { type: 'prompt', text: '$ ', cmd: 'kai "明日の予定は？"' },
+  { type: 'success', text: '📅 明日の予定:' },
+  { type: 'output', text: '   09:00  チームスタンドアップ' },
+  { type: 'output', text: '   14:00  デザインレビュー' },
+  { type: 'output', text: '   18:30  ジム' },
+  { type: 'blank' },
+  { type: 'prompt', text: '$ ', cmd: 'kai "天気もチェックして"' },
+  { type: 'success', text: '☀️ Singapore — 31°C 晴れ' },
+  { type: 'output', text: '   傘は要らなそうです 🌊' },
+];
+
+const terminal = document.getElementById('terminal');
+let i = 0;
+
+function addLine() {
+  if (i >= lines.length) {
+    // Add blinking cursor
+    const cursor = document.createElement('div');
+    cursor.innerHTML = '<span class="term-prompt">$ </span><span style="animation:pulse 1s infinite">▌</span>';
+    terminal.appendChild(cursor);
+    return;
+  }
+
+  const line = lines[i];
+  const el = document.createElement('div');
+  el.className = 'term-line';
+  el.style.animationDelay = '0s';
+
+  if (line.type === 'blank') {
+    el.innerHTML = '&nbsp;';
+  } else if (line.type === 'prompt') {
+    el.innerHTML = `<span class="term-prompt">${line.text}</span><span class="term-cmd">${line.cmd}</span>`;
+  } else if (line.type === 'success') {
+    el.innerHTML = `<span class="term-success">${line.text}</span>`;
+  } else if (line.type === 'highlight') {
+    el.innerHTML = `<span class="term-highlight">${line.text}</span>`;
+  } else {
+    el.innerHTML = `<span class="term-output">${line.text}</span>`;
+  }
+
+  terminal.appendChild(el);
+  i++;
+
+  const delay = line.type === 'prompt' ? 800 : line.type === 'blank' ? 300 : 150;
+  setTimeout(addLine, delay);
+}
+
+// Start terminal animation after page loads
+setTimeout(addLine, 1500);
+
+// Parallax glow effect
+document.addEventListener('mousemove', (e) => {
+  const x = e.clientX / window.innerWidth;
+  const y = e.clientY / window.innerHeight;
+  document.querySelector('.bg-glow.one').style.transform =
+    `translate(${x * 80}px, ${y * 60}px) scale(1.05)`;
+  document.querySelector('.bg-glow.two').style.transform =
+    `translate(${-x * 60}px, ${-y * 80}px) scale(0.95)`;
+});
+</script>
+
+</body>
+</html>
