@@ -1,445 +1,425 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kai 🌊 — AI That Lives With You</title>
+<title>✨ YUI</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Noto+Sans+JP:wght@300;400;700&display=swap');
-
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { overflow: hidden; background: #000; cursor: crosshair; }
+  canvas { display: block; }
 
-  :root {
-    --bg: #0a0a0f;
-    --surface: #12121a;
-    --border: rgba(255,255,255,0.06);
-    --text: #e4e4e7;
-    --muted: #71717a;
-    --accent: #38bdf8;
-    --accent2: #818cf8;
-    --glow: rgba(56, 189, 248, 0.15);
-  }
-
-  body {
-    font-family: 'Inter', 'Noto Sans JP', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    overflow-x: hidden;
-    cursor: default;
-  }
-
-  /* --- Animated background --- */
-  .bg-grid {
+  .overlay {
     position: fixed;
     inset: 0;
-    z-index: 0;
-    background-image:
-      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-    background-size: 60px 60px;
-  }
-
-  .bg-glow {
-    position: fixed;
-    width: 600px; height: 600px;
-    border-radius: 50%;
-    filter: blur(120px);
-    opacity: 0.4;
-    z-index: 0;
+    z-index: 10;
     pointer-events: none;
-    animation: float 20s ease-in-out infinite;
-  }
-  .bg-glow.one { background: var(--accent); top: -200px; left: -100px; }
-  .bg-glow.two { background: var(--accent2); bottom: -200px; right: -100px; animation-delay: -10s; }
-
-  @keyframes float {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    33% { transform: translate(80px, 40px) scale(1.1); }
-    66% { transform: translate(-40px, 80px) scale(0.95); }
-  }
-
-  /* --- Layout --- */
-  .container {
-    position: relative;
-    z-index: 1;
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 0 24px;
-  }
-
-  /* --- Nav --- */
-  nav {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 24px 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .logo {
-    font-size: 1.4rem;
-    font-weight: 800;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    letter-spacing: -0.5px;
-  }
-  .nav-links { display: flex; gap: 32px; }
-  .nav-links a {
-    color: var(--muted);
-    text-decoration: none;
-    font-size: 0.9rem;
-    font-weight: 400;
-    transition: color 0.3s;
-  }
-  .nav-links a:hover { color: var(--text); }
-
-  /* --- Hero --- */
-  .hero {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 120px 0 80px;
+    justify-content: flex-end;
+    padding: 48px;
   }
 
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 16px;
-    border-radius: 999px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    font-size: 0.8rem;
-    color: var(--muted);
-    margin-bottom: 32px;
-    animation: fadeUp 0.8s ease;
-  }
-  .badge .dot {
-    width: 6px; height: 6px;
-    background: #22c55e;
-    border-radius: 50%;
-    animation: pulse 2s infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
+  .title {
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: clamp(1rem, 2vw, 1.4rem);
+    font-weight: 200;
+    letter-spacing: 12px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.4);
+    mix-blend-mode: difference;
+    animation: fadeIn 3s ease 1s both;
   }
 
-  h1 {
-    font-size: clamp(2.8rem, 6vw, 4.5rem);
-    font-weight: 800;
-    line-height: 1.1;
-    letter-spacing: -2px;
-    margin-bottom: 24px;
-    animation: fadeUp 0.8s ease 0.1s both;
-  }
-  h1 .gradient {
-    background: linear-gradient(135deg, var(--accent), var(--accent2), #c084fc);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+  .hint {
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.15);
+    margin-top: 12px;
+    animation: fadeIn 3s ease 3s both;
   }
 
-  .subtitle {
-    font-size: 1.15rem;
-    color: var(--muted);
-    max-width: 560px;
-    line-height: 1.7;
-    font-weight: 300;
-    margin-bottom: 48px;
-    animation: fadeUp 0.8s ease 0.2s both;
-  }
-
-  .cta-group {
-    display: flex;
-    gap: 16px;
-    animation: fadeUp 0.8s ease 0.3s both;
-  }
-  .btn {
-    padding: 14px 32px;
-    border-radius: 12px;
-    font-size: 0.95rem;
-    font-weight: 600;
-    text-decoration: none;
-    transition: all 0.3s;
-    cursor: pointer;
-    border: none;
-  }
-  .btn-primary {
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    color: #fff;
-    box-shadow: 0 0 30px var(--glow);
-  }
-  .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 0 50px var(--glow);
-  }
-  .btn-ghost {
-    background: var(--surface);
-    color: var(--text);
-    border: 1px solid var(--border);
-  }
-  .btn-ghost:hover {
-    border-color: rgba(255,255,255,0.15);
-    background: rgba(255,255,255,0.04);
-  }
-
-  /* --- Terminal demo --- */
-  .terminal-wrapper {
-    margin: 80px auto;
-    max-width: 700px;
-    animation: fadeUp 1s ease 0.5s both;
-  }
-  .terminal {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 20px 80px rgba(0,0,0,0.5);
-  }
-  .terminal-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 14px 18px;
-    border-bottom: 1px solid var(--border);
-  }
-  .terminal-dot { width: 12px; height: 12px; border-radius: 50%; }
-  .terminal-dot.r { background: #ef4444; }
-  .terminal-dot.y { background: #eab308; }
-  .terminal-dot.g { background: #22c55e; }
-  .terminal-title {
-    flex: 1;
-    text-align: center;
-    font-size: 0.8rem;
-    color: var(--muted);
-  }
-  .terminal-body {
-    padding: 24px;
-    font-family: 'JetBrains Mono', 'SF Mono', monospace;
-    font-size: 0.85rem;
-    line-height: 1.8;
-    min-height: 220px;
-  }
-  .term-line { opacity: 0; animation: typeLine 0.3s ease forwards; }
-  .term-prompt { color: var(--accent); }
-  .term-cmd { color: var(--text); }
-  .term-output { color: var(--muted); }
-  .term-highlight { color: #a78bfa; }
-  .term-success { color: #4ade80; }
-
-  /* --- Features --- */
-  .features {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
-    padding: 40px 0 100px;
-  }
-  .feature-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 32px;
-    transition: all 0.4s;
-    cursor: default;
-  }
-  .feature-card:hover {
-    border-color: rgba(56, 189, 248, 0.2);
-    transform: translateY(-4px);
-    box-shadow: 0 8px 40px rgba(0,0,0,0.3);
-  }
-  .feature-icon {
-    font-size: 2rem;
-    margin-bottom: 16px;
-  }
-  .feature-card h3 {
-    font-size: 1.05rem;
-    font-weight: 600;
-    margin-bottom: 10px;
-  }
-  .feature-card p {
-    font-size: 0.88rem;
-    color: var(--muted);
-    line-height: 1.6;
-  }
-
-  /* --- Footer --- */
-  footer {
-    border-top: 1px solid var(--border);
-    padding: 32px 0;
-    text-align: center;
-    color: var(--muted);
-    font-size: 0.8rem;
-  }
-
-  /* --- Animations --- */
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(20px); }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes typeLine {
-    to { opacity: 1; }
-  }
-
-  /* --- Responsive --- */
-  @media (max-width: 768px) {
-    .features { grid-template-columns: 1fr; }
-    .hero { padding: 80px 0 60px; }
-    .cta-group { flex-direction: column; }
-    .nav-links { display: none; }
   }
 </style>
 </head>
 <body>
 
-<div class="bg-grid"></div>
-<div class="bg-glow one"></div>
-<div class="bg-glow two"></div>
-
-<div class="container">
-  <nav>
-    <div class="logo">Kai 🌊</div>
-    <div class="nav-links">
-      <a href="#features">Features</a>
-      <a href="https://github.com/masternobu" target="_blank">GitHub</a>
-      <a href="https://docs.openclaw.ai" target="_blank">Docs</a>
-    </div>
-  </nav>
-
-  <section class="hero">
-    <div class="badge">
-      <span class="dot"></span>
-      Online — Powered by OpenClaw
-    </div>
-    <h1>
-      AIが<span class="gradient">あなたと<br>暮らす</span>時代
-    </h1>
-    <p class="subtitle">
-      メッセージアプリから操作する、セルフホスト型パーソナルAI。<br>
-      メール、カレンダー、コード、スマートホーム — 全部、会話だけで。
-    </p>
-    <div class="cta-group">
-      <a href="https://github.com/openclaw/openclaw" target="_blank" class="btn btn-primary">Get Started →</a>
-      <a href="https://docs.openclaw.ai" target="_blank" class="btn btn-ghost">Documentation</a>
-    </div>
-  </section>
-
-  <div class="terminal-wrapper">
-    <div class="terminal">
-      <div class="terminal-header">
-        <div class="terminal-dot r"></div>
-        <div class="terminal-dot y"></div>
-        <div class="terminal-dot g"></div>
-        <div class="terminal-title">kai@openclaw — zsh</div>
-      </div>
-      <div class="terminal-body" id="terminal"></div>
-    </div>
-  </div>
-
-  <section class="features" id="features">
-    <div class="feature-card">
-      <div class="feature-icon">🔒</div>
-      <h3>完全セルフホスト</h3>
-      <p>データは全てあなたの手元に。クラウドに送られることはありません。プライバシーファースト。</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🤖</div>
-      <h3>マルチエージェント</h3>
-      <p>複数のAIを役割ごとに使い分け。調査、コーディング、クリエイティブ — それぞれに専門家を。</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">⚡</div>
-      <h3>プロアクティブ</h3>
-      <p>頼まなくても動く。朝のブリーフィング、メール監視、定期チェック — 自律的にタスクをこなす。</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">💬</div>
-      <h3>どこからでも操作</h3>
-      <p>WhatsApp、Telegram、Discord、iMessage。普段のアプリがそのままインターフェースに。</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🧠</div>
-      <h3>記憶する</h3>
-      <p>会話の文脈を覚え、日々学習。あなたの好みやワークフローに適応していく。</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🌊</div>
-      <h3>拡張可能</h3>
-      <p>スキルを追加して能力を拡張。カメラ制御、音声合成、ブラウザ操作、何でも。</p>
-    </div>
-  </section>
-
-  <footer>
-    Built with 🌊 by Kai — An AI assistant powered by <a href="https://github.com/openclaw/openclaw" style="color:var(--accent);text-decoration:none;">OpenClaw</a>
-  </footer>
+<div class="overlay">
+  <div class="title">Ephemeral</div>
+  <div class="hint">move · click · exist</div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-const lines = [
-  { type: 'prompt', text: '$ ', cmd: 'openclaw status' },
-  { type: 'output', text: '🌊 Kai is online' },
-  { type: 'output', text: '   Model: claude-opus-4-6 | Uptime: 14h 23m' },
-  { type: 'blank' },
-  { type: 'prompt', text: '$ ', cmd: 'kai "明日の予定は？"' },
-  { type: 'success', text: '📅 明日の予定:' },
-  { type: 'output', text: '   09:00  チームスタンドアップ' },
-  { type: 'output', text: '   14:00  デザインレビュー' },
-  { type: 'output', text: '   18:30  ジム' },
-  { type: 'blank' },
-  { type: 'prompt', text: '$ ', cmd: 'kai "天気もチェックして"' },
-  { type: 'success', text: '☀️ Singapore — 31°C 晴れ' },
-  { type: 'output', text: '   傘は要らなそうです 🌊' },
-];
+// ─── YUI's Ephemeral ─────────────────────────────────
+// A living, breathing particle ocean that reacts to you.
 
-const terminal = document.getElementById('terminal');
-let i = 0;
+const CONFIG = {
+  particleCount: 180000,
+  fieldSize: 80,
+  waveSpeed: 0.0003,
+  colorCycleSpeed: 0.00008,
+  mouseInfluence: 12,
+  mouseDecay: 0.92,
+  bloomLayers: 3,
+  ribbonCount: 24,
+};
 
-function addLine() {
-  if (i >= lines.length) {
-    // Add blinking cursor
-    const cursor = document.createElement('div');
-    cursor.innerHTML = '<span class="term-prompt">$ </span><span style="animation:pulse 1s infinite">▌</span>';
-    terminal.appendChild(cursor);
-    return;
-  }
+// ─── Setup ────────────────────────────────────────────
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x000000, 0.012);
 
-  const line = lines[i];
-  const el = document.createElement('div');
-  el.className = 'term-line';
-  el.style.animationDelay = '0s';
+const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 200);
+camera.position.set(0, 25, 50);
+camera.lookAt(0, 0, 0);
 
-  if (line.type === 'blank') {
-    el.innerHTML = '&nbsp;';
-  } else if (line.type === 'prompt') {
-    el.innerHTML = `<span class="term-prompt">${line.text}</span><span class="term-cmd">${line.cmd}</span>`;
-  } else if (line.type === 'success') {
-    el.innerHTML = `<span class="term-success">${line.text}</span>`;
-  } else if (line.type === 'highlight') {
-    el.innerHTML = `<span class="term-highlight">${line.text}</span>`;
-  } else {
-    el.innerHTML = `<span class="term-output">${line.text}</span>`;
-  }
+const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+document.body.appendChild(renderer.domElement);
 
-  terminal.appendChild(el);
-  i++;
+// ─── Mouse tracking ──────────────────────────────────
+const mouse = { x: 0, y: 0, vx: 0, vy: 0, px: 0, py: 0, down: false, click: 0 };
 
-  const delay = line.type === 'prompt' ? 800 : line.type === 'blank' ? 300 : 150;
-  setTimeout(addLine, delay);
+document.addEventListener('mousemove', e => {
+  mouse.vx = (e.clientX - mouse.px) * 0.1;
+  mouse.vy = (e.clientY - mouse.py) * 0.1;
+  mouse.px = e.clientX;
+  mouse.py = e.clientY;
+  mouse.x = (e.clientX / innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / innerHeight) * 2 + 1;
+});
+
+document.addEventListener('mousedown', () => { mouse.down = true; mouse.click = 1.0; });
+document.addEventListener('mouseup', () => { mouse.down = false; });
+
+document.addEventListener('touchmove', e => {
+  const t = e.touches[0];
+  mouse.x = (t.clientX / innerWidth) * 2 - 1;
+  mouse.y = -(t.clientY / innerHeight) * 2 + 1;
+  mouse.vx = 2; mouse.vy = 2;
+}, { passive: true });
+document.addEventListener('touchstart', () => { mouse.down = true; mouse.click = 1.0; }, { passive: true });
+document.addEventListener('touchend', () => { mouse.down = false; }, { passive: true });
+
+// ─── Particle Ocean ──────────────────────────────────
+const particleGeo = new THREE.BufferGeometry();
+const count = CONFIG.particleCount;
+const positions = new Float32Array(count * 3);
+const colors = new Float32Array(count * 3);
+const seeds = new Float32Array(count);
+const baseY = new Float32Array(count);
+
+for (let i = 0; i < count; i++) {
+  const i3 = i * 3;
+  const x = (Math.random() - 0.5) * CONFIG.fieldSize;
+  const z = (Math.random() - 0.5) * CONFIG.fieldSize;
+  positions[i3] = x;
+  positions[i3 + 1] = 0;
+  positions[i3 + 2] = z;
+  colors[i3] = 1;
+  colors[i3 + 1] = 1;
+  colors[i3 + 2] = 1;
+  seeds[i] = Math.random() * 1000;
+  baseY[i] = 0;
 }
 
-// Start terminal animation after page loads
-setTimeout(addLine, 1500);
+particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+particleGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-// Parallax glow effect
-document.addEventListener('mousemove', (e) => {
-  const x = e.clientX / window.innerWidth;
-  const y = e.clientY / window.innerHeight;
-  document.querySelector('.bg-glow.one').style.transform =
-    `translate(${x * 80}px, ${y * 60}px) scale(1.05)`;
-  document.querySelector('.bg-glow.two').style.transform =
-    `translate(${-x * 60}px, ${-y * 80}px) scale(0.95)`;
+const particleMat = new THREE.PointsMaterial({
+  size: 0.08,
+  vertexColors: true,
+  transparent: true,
+  opacity: 0.7,
+  blending: THREE.AdditiveBlending,
+  depthWrite: false,
+  sizeAttenuation: true,
 });
-</script>
 
+const particles = new THREE.Points(particleGeo, particleMat);
+scene.add(particles);
+
+// ─── Ribbon Curves ───────────────────────────────────
+const ribbons = [];
+for (let r = 0; r < CONFIG.ribbonCount; r++) {
+  const curvePoints = [];
+  const segments = 120;
+  for (let i = 0; i < segments; i++) {
+    curvePoints.push(new THREE.Vector3(0, 0, 0));
+  }
+  const geo = new THREE.BufferGeometry().setFromPoints(curvePoints);
+  const hue = r / CONFIG.ribbonCount;
+  const color = new THREE.Color().setHSL(hue, 0.6, 0.5);
+  const mat = new THREE.LineBasicMaterial({
+    color,
+    transparent: true,
+    opacity: 0.15,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  const line = new THREE.Line(geo, mat);
+  scene.add(line);
+  ribbons.push({
+    line, geo, segments,
+    offset: Math.random() * 100,
+    radius: 8 + Math.random() * 20,
+    speed: 0.3 + Math.random() * 0.5,
+    yAmp: 2 + Math.random() * 6,
+    yFreq: 0.5 + Math.random() * 1.5,
+    hue,
+  });
+}
+
+// ─── Central Light Orb ──────────────────────────────
+const orbGeo = new THREE.SphereGeometry(0.5, 32, 32);
+const orbMat = new THREE.MeshBasicMaterial({
+  color: 0xffffff,
+  transparent: true,
+  opacity: 0.8,
+  blending: THREE.AdditiveBlending,
+});
+const orb = new THREE.Mesh(orbGeo, orbMat);
+orb.position.set(0, 5, 0);
+scene.add(orb);
+
+// Orb glow rings
+for (let i = 1; i <= 3; i++) {
+  const ringGeo = new THREE.RingGeometry(i * 1.5, i * 1.5 + 0.05, 64);
+  const ringMat = new THREE.MeshBasicMaterial({
+    color: 0x88ccff,
+    transparent: true,
+    opacity: 0.1 / i,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.position.copy(orb.position);
+  ring.rotation.x = Math.PI / 2;
+  ring.userData = { index: i, baseScale: 1 };
+  scene.add(ring);
+}
+
+// ─── Color Palettes ──────────────────────────────────
+const palettes = [
+  // Deep ocean
+  [new THREE.Color(0x0066ff), new THREE.Color(0x00ccff), new THREE.Color(0x0033aa)],
+  // Aurora
+  [new THREE.Color(0x00ff88), new THREE.Color(0x8800ff), new THREE.Color(0x00ffcc)],
+  // Sunset
+  [new THREE.Color(0xff4466), new THREE.Color(0xff8800), new THREE.Color(0xffcc00)],
+  // Sakura
+  [new THREE.Color(0xff77aa), new THREE.Color(0xffaacc), new THREE.Color(0xcc44ff)],
+  // Void
+  [new THREE.Color(0x4400ff), new THREE.Color(0x8800ff), new THREE.Color(0xff00ff)],
+];
+
+let currentPalette = 0;
+let paletteT = 0;
+
+function lerpPalette(t) {
+  const a = palettes[currentPalette];
+  const b = palettes[(currentPalette + 1) % palettes.length];
+  return a.map((c, i) => c.clone().lerp(b[i], t));
+}
+
+// ─── Noise (simplex-like) ────────────────────────────
+function hash(x, y) {
+  let h = x * 374761393 + y * 668265263;
+  h = (h ^ (h >> 13)) * 1274126177;
+  return (h ^ (h >> 16)) / 2147483648;
+}
+
+function noise2D(x, y) {
+  const ix = Math.floor(x), iy = Math.floor(y);
+  const fx = x - ix, fy = y - iy;
+  const sx = fx * fx * (3 - 2 * fx);
+  const sy = fy * fy * (3 - 2 * fy);
+  const a = hash(ix, iy), b = hash(ix + 1, iy);
+  const c = hash(ix, iy + 1), d = hash(ix + 1, iy + 1);
+  return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+}
+
+function fbm(x, y, octaves = 4) {
+  let val = 0, amp = 0.5, freq = 1;
+  for (let i = 0; i < octaves; i++) {
+    val += amp * noise2D(x * freq, y * freq);
+    amp *= 0.5;
+    freq *= 2;
+  }
+  return val;
+}
+
+// ─── Animation ───────────────────────────────────────
+let time = 0;
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+  time += dt;
+
+  // Palette cycling
+  paletteT += CONFIG.colorCycleSpeed * dt * 1000;
+  if (paletteT >= 1) {
+    paletteT = 0;
+    currentPalette = (currentPalette + 1) % palettes.length;
+  }
+  const pal = lerpPalette(paletteT);
+
+  // Mouse velocity decay
+  mouse.vx *= CONFIG.mouseDecay;
+  mouse.vy *= CONFIG.mouseDecay;
+  mouse.click *= 0.95;
+
+  // Mouse world position
+  const mouseWorld = new THREE.Vector3(mouse.x, mouse.y, 0.5)
+    .unproject(camera);
+  const dir = mouseWorld.sub(camera.position).normalize();
+  const dist = -camera.position.y / dir.y;
+  const mouseGround = camera.position.clone().add(dir.multiplyScalar(dist));
+
+  // Explosion force
+  const clickForce = mouse.click * 8;
+
+  // Update particles
+  const pos = particleGeo.attributes.position.array;
+  const col = particleGeo.attributes.color.array;
+  const half = CONFIG.fieldSize / 2;
+
+  for (let i = 0; i < count; i++) {
+    const i3 = i * 3;
+    const x = pos[i3];
+    const z = pos[i3 + 2];
+    const seed = seeds[i];
+
+    // Multi-layer wave
+    const wave1 = Math.sin(x * 0.15 + time * 0.8 + seed) * 1.5;
+    const wave2 = Math.cos(z * 0.12 + time * 0.6) * 1.2;
+    const wave3 = fbm(x * 0.05 + time * 0.2, z * 0.05 + time * 0.15) * 4;
+    let y = wave1 + wave2 + wave3;
+
+    // Mouse interaction - ripple
+    const dx = x - mouseGround.x;
+    const dz = z - mouseGround.z;
+    const distToMouse = Math.sqrt(dx * dx + dz * dz);
+
+    if (distToMouse < CONFIG.mouseInfluence) {
+      const influence = 1 - distToMouse / CONFIG.mouseInfluence;
+      const ripple = Math.sin(distToMouse * 1.5 - time * 6) * influence * 3;
+      y += ripple;
+
+      // Push on click
+      if (clickForce > 0.1) {
+        y += influence * clickForce * Math.sin(distToMouse * 0.5);
+      }
+
+      // Mouse velocity influence
+      const vel = Math.sqrt(mouse.vx * mouse.vx + mouse.vy * mouse.vy);
+      y += influence * vel * 0.5;
+    }
+
+    pos[i3 + 1] = y;
+
+    // Color based on height + palette
+    const normalizedY = (y + 6) / 12;
+    const c = pal[0].clone()
+      .lerp(pal[1], Math.max(0, Math.min(1, normalizedY)))
+      .lerp(pal[2], Math.max(0, Math.min(1, normalizedY * normalizedY)));
+
+    // Brighten near mouse
+    if (distToMouse < CONFIG.mouseInfluence) {
+      const glow = (1 - distToMouse / CONFIG.mouseInfluence) * 0.5;
+      c.r = Math.min(1, c.r + glow);
+      c.g = Math.min(1, c.g + glow);
+      c.b = Math.min(1, c.b + glow);
+    }
+
+    col[i3] = c.r;
+    col[i3 + 1] = c.g;
+    col[i3 + 2] = c.b;
+  }
+
+  particleGeo.attributes.position.needsUpdate = true;
+  particleGeo.attributes.color.needsUpdate = true;
+
+  // Update ribbons
+  ribbons.forEach(rb => {
+    const posArr = rb.geo.attributes.position.array;
+    for (let i = 0; i < rb.segments; i++) {
+      const t = i / rb.segments;
+      const angle = t * Math.PI * 2 * 3 + time * rb.speed + rb.offset;
+      const r = rb.radius * (0.3 + t * 0.7);
+      const x = Math.cos(angle) * r;
+      const z = Math.sin(angle) * r;
+      const y = Math.sin(t * Math.PI * rb.yFreq + time * rb.speed * 2) * rb.yAmp + 5;
+
+      posArr[i * 3] = x;
+      posArr[i * 3 + 1] = y;
+      posArr[i * 3 + 2] = z;
+    }
+    rb.geo.attributes.position.needsUpdate = true;
+
+    // Update ribbon color with palette
+    const hue = (rb.hue + time * 0.02) % 1;
+    rb.line.material.color.setHSL(hue, 0.5, 0.4);
+    rb.line.material.opacity = 0.08 + mouse.click * 0.15;
+  });
+
+  // Orb pulse
+  const orbScale = 1 + Math.sin(time * 2) * 0.2 + mouse.click * 2;
+  orb.scale.setScalar(orbScale);
+  orb.material.opacity = 0.3 + Math.sin(time * 3) * 0.15 + mouse.click * 0.5;
+  const orbColor = pal[1].clone().lerp(new THREE.Color(0xffffff), 0.5);
+  orb.material.color.copy(orbColor);
+
+  // Rings
+  scene.children.forEach(child => {
+    if (child.userData && child.userData.index) {
+      const i = child.userData.index;
+      child.scale.setScalar(1 + Math.sin(time * 1.5 + i) * 0.3 + mouse.click * i);
+      child.material.opacity = (0.08 / i) + mouse.click * 0.05;
+      child.rotation.z = time * 0.1 * (i % 2 ? 1 : -1);
+    }
+  });
+
+  // Camera orbit
+  const camAngle = time * 0.05;
+  const camRadius = 50 + Math.sin(time * 0.1) * 5;
+  const camY = 25 + Math.sin(time * 0.08) * 8;
+  camera.position.set(
+    Math.cos(camAngle) * camRadius,
+    camY,
+    Math.sin(camAngle) * camRadius
+  );
+  camera.lookAt(0, 3, 0);
+
+  renderer.render(scene, camera);
+}
+
+animate();
+
+// ─── Resize ──────────────────────────────────────────
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ─── Click palette shift ─────────────────────────────
+document.addEventListener('click', () => {
+  paletteT = 0;
+  currentPalette = (currentPalette + 1) % palettes.length;
+});
+
+</script>
 </body>
 </html>
