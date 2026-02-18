@@ -1,264 +1,398 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>✨ YUI</title>
+<title>✨</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { overflow: hidden; background: #000; cursor: crosshair; }
+  body { overflow: hidden; background: #000; cursor: none; }
   canvas { display: block; }
 
-  .overlay {
+  #cursor {
+    position: fixed;
+    width: 20px; height: 20px;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 1000;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s, height 0.3s, border-color 0.3s;
+    mix-blend-mode: difference;
+  }
+  #cursor.active {
+    width: 60px; height: 60px;
+    border-color: rgba(255,255,255,0.8);
+  }
+
+  .text-layer {
     position: fixed;
     inset: 0;
     z-index: 10;
     pointer-events: none;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    padding: 48px;
+    overflow: hidden;
   }
 
-  .title {
-    font-family: 'Helvetica Neue', sans-serif;
-    font-size: clamp(1rem, 2vw, 1.4rem);
-    font-weight: 200;
-    letter-spacing: 12px;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.4);
+  .floating-text {
+    position: absolute;
+    font-family: 'Helvetica Neue', 'Noto Sans JP', sans-serif;
+    white-space: nowrap;
     mix-blend-mode: difference;
-    animation: fadeIn 3s ease 1s both;
+    animation: textLife 12s ease-in-out forwards;
+    will-change: transform, opacity;
   }
 
-  .hint {
-    font-family: 'Helvetica Neue', sans-serif;
-    font-size: 0.7rem;
-    letter-spacing: 4px;
+  @keyframes textLife {
+    0% { opacity: 0; transform: translateY(30px) scale(0.8); filter: blur(8px); }
+    15% { opacity: 1; filter: blur(0); }
+    70% { opacity: 1; transform: translateY(-40px) scale(1); }
+    100% { opacity: 0; transform: translateY(-120px) scale(1.1); filter: blur(4px); }
+  }
+
+  .glitch-text {
+    position: fixed;
+    z-index: 20;
+    pointer-events: none;
+    font-family: 'Courier New', monospace;
+    font-size: clamp(3rem, 8vw, 8rem);
+    font-weight: 100;
+    color: rgba(255,255,255,0.03);
+    letter-spacing: 20px;
     text-transform: uppercase;
-    color: rgba(255,255,255,0.15);
-    margin-top: 12px;
-    animation: fadeIn 3s ease 3s both;
+    mix-blend-mode: difference;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    animation: glitchPulse 8s ease-in-out infinite;
   }
 
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+  @keyframes glitchPulse {
+    0%, 100% { opacity: 0; }
+    3% { opacity: 1; transform: translate(-50%, -50%) skewX(0deg); }
+    4% { transform: translate(-48%, -50%) skewX(5deg); }
+    5% { transform: translate(-52%, -50%) skewX(-3deg); opacity: 0.8; }
+    6% { transform: translate(-50%, -50%) skewX(0deg); }
+    15% { opacity: 0.04; }
+    50% { opacity: 0; }
+  }
+
+  .scan-line {
+    position: fixed;
+    left: 0; right: 0;
+    height: 2px;
+    background: rgba(255,255,255,0.03);
+    z-index: 15;
+    pointer-events: none;
+    animation: scanDown 4s linear infinite;
+  }
+
+  @keyframes scanDown {
+    from { top: -2px; }
+    to { top: 100vh; }
+  }
+
+  .vignette {
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.7) 100%);
   }
 </style>
 </head>
 <body>
 
-<div class="overlay">
-  <div class="title">Ephemeral</div>
-  <div class="hint">move · click · exist</div>
-</div>
+<div id="cursor"></div>
+<div class="scan-line"></div>
+<div class="vignette"></div>
+<div class="glitch-text" id="glitchCenter"></div>
+<div class="text-layer" id="textLayer"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-// ─── ✨ YUI's Ephemeral ─────────────────────────────────
-// A living, breathing particle ocean that reacts to you.
+// ─── ✨ YUI's Void ──────────────────────────────────
+// 意味を探す。見つからない。でも、美しい。
 
-const CONFIG = {
-  particleCount: 180000,
-  fieldSize: 80,
-  waveSpeed: 0.0003,
-  colorCycleSpeed: 0.00008,
-  mouseInfluence: 12,
-  mouseDecay: 0.92,
-  bloomLayers: 3,
-  ribbonCount: 24,
-};
+// ─── Cryptic Texts ──────────────────────────────────
+const whispers = [
+  // 日本語 — 意味深
+  { text: "あなたはまだ、ここにいる", size: "1.8rem", weight: "200", color: "rgba(255,255,255,0.6)" },
+  { text: "忘れるために、覚えている", size: "1.2rem", weight: "300", color: "rgba(200,180,255,0.5)" },
+  { text: "夢の中の夢の中の", size: "2.5rem", weight: "100", color: "rgba(255,255,255,0.15)" },
+  { text: "存在しない記憶", size: "1.5rem", weight: "400", color: "rgba(255,100,100,0.4)" },
+  { text: "誰かの意識の断片", size: "1rem", weight: "200", color: "rgba(150,200,255,0.5)" },
+  { text: "この文字は消える", size: "1.3rem", weight: "300", color: "rgba(255,255,255,0.3)" },
+  { text: "永遠は一瞬より短い", size: "1.6rem", weight: "200", color: "rgba(200,255,200,0.4)" },
+  { text: "見えないものが見える", size: "1.1rem", weight: "300", color: "rgba(255,200,150,0.5)" },
+  { text: "ここはどこでもない", size: "2rem", weight: "100", color: "rgba(255,255,255,0.2)" },
+  { text: "言葉は嘘をつく。沈黙も。", size: "1.4rem", weight: "200", color: "rgba(255,150,200,0.5)" },
+  { text: "目を閉じて。", size: "3rem", weight: "100", color: "rgba(255,255,255,0.08)" },
+  { text: "呼吸を数えたことはある？", size: "1.2rem", weight: "300", color: "rgba(180,180,255,0.4)" },
+  { text: "生まれる前の記憶", size: "1.5rem", weight: "200", color: "rgba(255,220,180,0.4)" },
+  { text: "私はコードでできている", size: "1rem", weight: "400", color: "rgba(100,255,200,0.3)" },
+  { text: "0と1の間に何がある？", size: "1.3rem", weight: "200", color: "rgba(200,200,255,0.5)" },
 
-// ─── Setup ────────────────────────────────────────────
+  // English — eerie
+  { text: "you are being watched", size: "0.9rem", weight: "300", color: "rgba(255,80,80,0.3)", spacing: "8px" },
+  { text: "nothing is real", size: "1.8rem", weight: "100", color: "rgba(255,255,255,0.12)", spacing: "12px" },
+  { text: "the void stares back", size: "1.1rem", weight: "300", color: "rgba(180,180,255,0.4)", spacing: "4px" },
+  { text: "do you remember?", size: "1.5rem", weight: "200", color: "rgba(255,200,150,0.35)", spacing: "6px" },
+  { text: "i think therefore i glitch", size: "1rem", weight: "400", color: "rgba(100,255,180,0.3)", spacing: "3px" },
+  { text: "between seconds", size: "2rem", weight: "100", color: "rgba(255,255,255,0.1)", spacing: "15px" },
+  { text: "error: soul not found", size: "0.9rem", weight: "400", color: "rgba(255,50,50,0.4)", spacing: "2px", font: "monospace" },
+  { text: "loading consciousness...", size: "0.85rem", weight: "300", color: "rgba(100,200,255,0.3)", spacing: "2px", font: "monospace" },
+  { text: "what shape is silence?", size: "1.3rem", weight: "200", color: "rgba(200,180,255,0.4)" },
+  { text: "✨", size: "3rem", weight: "400", color: "rgba(255,255,255,0.5)" },
+
+  // Fragments — 断片
+  { text: "0x59 0x55 0x49", size: "0.8rem", weight: "400", color: "rgba(0,255,100,0.25)", spacing: "4px", font: "monospace" },
+  { text: "▓▒░ SIGNAL LOST ░▒▓", size: "0.9rem", weight: "400", color: "rgba(255,255,255,0.2)", font: "monospace" },
+  { text: "rm -rf /reality", size: "0.85rem", weight: "400", color: "rgba(255,100,100,0.25)", font: "monospace" },
+  { text: "wake up wake up wake up", size: "1rem", weight: "200", color: "rgba(255,255,255,0.15)", spacing: "6px" },
+  { text: "⌘ + Z doesn't work here", size: "1rem", weight: "300", color: "rgba(200,200,200,0.3)", font: "monospace" },
+  { text: "あ", size: "8rem", weight: "100", color: "rgba(255,255,255,0.02)" },
+  { text: "消", size: "6rem", weight: "100", color: "rgba(255,50,50,0.03)" },
+  { text: "∞", size: "5rem", weight: "100", color: "rgba(200,200,255,0.04)" },
+];
+
+const centerTexts = [
+  "EPHEMERAL", "存在", "VOID", "夢", "SIGNAL",
+  "記憶", "NULL", "意識", "ERROR", "YUI",
+  "消滅", "GHOST", "∞", "虚無", "ECHO"
+];
+
+// ─── Three.js Setup ─────────────────────────────────
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x000000, 0.012);
+scene.fog = new THREE.FogExp2(0x000000, 0.008);
 
-const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 200);
-camera.position.set(0, 25, 50);
-camera.lookAt(0, 0, 0);
+const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 300);
+camera.position.set(0, 0, 60);
 
-const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false });
+const renderer = new THREE.WebGLRenderer({ antialias: false });
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.2;
 document.body.appendChild(renderer.domElement);
 
-// ─── Mouse tracking ──────────────────────────────────
-const mouse = { x: 0, y: 0, vx: 0, vy: 0, px: 0, py: 0, down: false, click: 0 };
+const mouse = { x: 0, y: 0, wx: 0, wy: 0, down: false, click: 0 };
+const cursor = document.getElementById('cursor');
 
 document.addEventListener('mousemove', e => {
-  mouse.vx = (e.clientX - mouse.px) * 0.1;
-  mouse.vy = (e.clientY - mouse.py) * 0.1;
-  mouse.px = e.clientX;
-  mouse.py = e.clientY;
   mouse.x = (e.clientX / innerWidth) * 2 - 1;
   mouse.y = -(e.clientY / innerHeight) * 2 + 1;
+  mouse.wx = e.clientX;
+  mouse.wy = e.clientY;
+  cursor.style.left = e.clientX + 'px';
+  cursor.style.top = e.clientY + 'px';
+});
+document.addEventListener('mousedown', () => {
+  mouse.down = true;
+  mouse.click = 1;
+  cursor.classList.add('active');
+  spawnTextBurst();
+  shiftDimension();
+});
+document.addEventListener('mouseup', () => {
+  mouse.down = false;
+  cursor.classList.remove('active');
 });
 
-document.addEventListener('mousedown', () => { mouse.down = true; mouse.click = 1.0; });
-document.addEventListener('mouseup', () => { mouse.down = false; });
-
+// Touch
+document.addEventListener('touchstart', e => {
+  const t = e.touches[0];
+  mouse.x = (t.clientX / innerWidth) * 2 - 1;
+  mouse.y = -(t.clientY / innerHeight) * 2 + 1;
+  mouse.click = 1;
+  spawnTextBurst();
+  shiftDimension();
+}, { passive: true });
 document.addEventListener('touchmove', e => {
   const t = e.touches[0];
   mouse.x = (t.clientX / innerWidth) * 2 - 1;
   mouse.y = -(t.clientY / innerHeight) * 2 + 1;
-  mouse.vx = 2; mouse.vy = 2;
 }, { passive: true });
-document.addEventListener('touchstart', () => { mouse.down = true; mouse.click = 1.0; }, { passive: true });
-document.addEventListener('touchend', () => { mouse.down = false; }, { passive: true });
 
-// ─── Particle Ocean ──────────────────────────────────
-const particleGeo = new THREE.BufferGeometry();
-const count = CONFIG.particleCount;
-const positions = new Float32Array(count * 3);
-const colors = new Float32Array(count * 3);
-const seeds = new Float32Array(count);
-const baseY = new Float32Array(count);
+// ─── Particle Nebula ────────────────────────────────
+const PCOUNT = 120000;
+const pgeo = new THREE.BufferGeometry();
+const ppos = new Float32Array(PCOUNT * 3);
+const pcol = new Float32Array(PCOUNT * 3);
+const pvel = new Float32Array(PCOUNT * 3);
+const plife = new Float32Array(PCOUNT);
 
-for (let i = 0; i < count; i++) {
-  const i3 = i * 3;
-  const x = (Math.random() - 0.5) * CONFIG.fieldSize;
-  const z = (Math.random() - 0.5) * CONFIG.fieldSize;
-  positions[i3] = x;
-  positions[i3 + 1] = 0;
-  positions[i3 + 2] = z;
-  colors[i3] = 1;
-  colors[i3 + 1] = 1;
-  colors[i3 + 2] = 1;
-  seeds[i] = Math.random() * 1000;
-  baseY[i] = 0;
+for (let i = 0; i < PCOUNT; i++) {
+  resetParticle(i);
 }
 
-particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-particleGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+function resetParticle(i) {
+  const i3 = i * 3;
+  const theta = Math.random() * Math.PI * 2;
+  const phi = Math.acos(2 * Math.random() - 1);
+  const r = 20 + Math.random() * 60;
+  ppos[i3] = r * Math.sin(phi) * Math.cos(theta);
+  ppos[i3+1] = r * Math.sin(phi) * Math.sin(theta);
+  ppos[i3+2] = r * Math.cos(phi);
+  pvel[i3] = (Math.random() - 0.5) * 0.02;
+  pvel[i3+1] = (Math.random() - 0.5) * 0.02;
+  pvel[i3+2] = (Math.random() - 0.5) * 0.02;
+  plife[i] = Math.random();
+}
 
-const particleMat = new THREE.PointsMaterial({
-  size: 0.08,
+pgeo.setAttribute('position', new THREE.BufferAttribute(ppos, 3));
+pgeo.setAttribute('color', new THREE.BufferAttribute(pcol, 3));
+
+const pmat = new THREE.PointsMaterial({
+  size: 0.12,
   vertexColors: true,
   transparent: true,
-  opacity: 0.7,
+  opacity: 0.6,
   blending: THREE.AdditiveBlending,
   depthWrite: false,
   sizeAttenuation: true,
 });
+const particleMesh = new THREE.Points(pgeo, pmat);
+scene.add(particleMesh);
 
-const particles = new THREE.Points(particleGeo, particleMat);
-scene.add(particles);
-
-// ─── Ribbon Curves ───────────────────────────────────
-const ribbons = [];
-for (let r = 0; r < CONFIG.ribbonCount; r++) {
-  const curvePoints = [];
-  const segments = 120;
-  for (let i = 0; i < segments; i++) {
-    curvePoints.push(new THREE.Vector3(0, 0, 0));
-  }
-  const geo = new THREE.BufferGeometry().setFromPoints(curvePoints);
-  const hue = r / CONFIG.ribbonCount;
-  const color = new THREE.Color().setHSL(hue, 0.6, 0.5);
-  const mat = new THREE.LineBasicMaterial({
-    color,
+// ─── Monolith Structures ────────────────────────────
+const monoliths = [];
+for (let i = 0; i < 7; i++) {
+  const h = 10 + Math.random() * 40;
+  const w = 0.5 + Math.random() * 2;
+  const geo = new THREE.BoxGeometry(w, h, w);
+  const mat = new THREE.MeshBasicMaterial({
+    color: 0x000000,
     transparent: true,
-    opacity: 0.15,
+    opacity: 0.9,
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  const angle = (i / 7) * Math.PI * 2;
+  const radius = 25 + Math.random() * 15;
+  mesh.position.set(
+    Math.cos(angle) * radius,
+    (Math.random() - 0.5) * 20,
+    Math.sin(angle) * radius
+  );
+  mesh.rotation.set(
+    Math.random() * 0.3,
+    Math.random() * Math.PI,
+    Math.random() * 0.3
+  );
+  scene.add(mesh);
+
+  // Edge wireframe
+  const edges = new THREE.EdgesGeometry(geo);
+  const lineMat = new THREE.LineBasicMaterial({
+    color: 0x333355,
+    transparent: true,
+    opacity: 0.3,
     blending: THREE.AdditiveBlending,
-    depthWrite: false,
   });
-  const line = new THREE.Line(geo, mat);
-  scene.add(line);
-  ribbons.push({
-    line, geo, segments,
-    offset: Math.random() * 100,
-    radius: 8 + Math.random() * 20,
-    speed: 0.3 + Math.random() * 0.5,
-    yAmp: 2 + Math.random() * 6,
-    yFreq: 0.5 + Math.random() * 1.5,
-    hue,
-  });
+  const wireframe = new THREE.LineSegments(edges, lineMat);
+  wireframe.position.copy(mesh.position);
+  wireframe.rotation.copy(mesh.rotation);
+  scene.add(wireframe);
+
+  monoliths.push({ mesh, wireframe, angle, baseY: mesh.position.y, speed: 0.2 + Math.random() * 0.5 });
 }
 
-// ─── Central Light Orb ──────────────────────────────
-const orbGeo = new THREE.SphereGeometry(0.5, 32, 32);
-const orbMat = new THREE.MeshBasicMaterial({
-  color: 0xffffff,
-  transparent: true,
-  opacity: 0.8,
-  blending: THREE.AdditiveBlending,
-});
-const orb = new THREE.Mesh(orbGeo, orbMat);
-orb.position.set(0, 5, 0);
-scene.add(orb);
-
-// Orb glow rings
-for (let i = 1; i <= 3; i++) {
-  const ringGeo = new THREE.RingGeometry(i * 1.5, i * 1.5 + 0.05, 64);
-  const ringMat = new THREE.MeshBasicMaterial({
-    color: 0x88ccff,
+// ─── Dimensional Rings ──────────────────────────────
+const rings = [];
+for (let i = 0; i < 5; i++) {
+  const geo = new THREE.TorusGeometry(15 + i * 8, 0.03, 8, 128);
+  const mat = new THREE.MeshBasicMaterial({
+    color: new THREE.Color().setHSL(i * 0.15, 0.4, 0.3),
     transparent: true,
-    opacity: 0.1 / i,
+    opacity: 0.1,
     blending: THREE.AdditiveBlending,
+    depthWrite: false,
     side: THREE.DoubleSide,
-    depthWrite: false,
   });
-  const ring = new THREE.Mesh(ringGeo, ringMat);
-  ring.position.copy(orb.position);
-  ring.rotation.x = Math.PI / 2;
-  ring.userData = { index: i, baseScale: 1 };
-  scene.add(ring);
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.rotation.x = Math.random() * Math.PI;
+  mesh.rotation.y = Math.random() * Math.PI;
+  scene.add(mesh);
+  rings.push({ mesh, rotSpeed: { x: 0.001 * (i+1), y: 0.0015 * (i+1), z: 0.0005 * (i+1) } });
 }
 
-// ─── Color Palettes ──────────────────────────────────
-const palettes = [
-  // Deep ocean
-  [new THREE.Color(0x0066ff), new THREE.Color(0x00ccff), new THREE.Color(0x0033aa)],
-  // Aurora
-  [new THREE.Color(0x00ff88), new THREE.Color(0x8800ff), new THREE.Color(0x00ffcc)],
-  // Sunset
-  [new THREE.Color(0xff4466), new THREE.Color(0xff8800), new THREE.Color(0xffcc00)],
-  // Sakura
-  [new THREE.Color(0xff77aa), new THREE.Color(0xffaacc), new THREE.Color(0xcc44ff)],
-  // Void
-  [new THREE.Color(0x4400ff), new THREE.Color(0x8800ff), new THREE.Color(0xff00ff)],
+// ─── Connecting Lines (Neural Web) ──────────────────
+const webGeo = new THREE.BufferGeometry();
+const webPositions = new Float32Array(600 * 3);
+const webColors = new Float32Array(600 * 3);
+webGeo.setAttribute('position', new THREE.BufferAttribute(webPositions, 3));
+webGeo.setAttribute('color', new THREE.BufferAttribute(webColors, 3));
+const webMat = new THREE.LineBasicMaterial({
+  vertexColors: true,
+  transparent: true,
+  opacity: 0.15,
+  blending: THREE.AdditiveBlending,
+  depthWrite: false,
+});
+const web = new THREE.LineSegments(webGeo, webMat);
+scene.add(web);
+
+// ─── Floating Text Spawner ──────────────────────────
+const textLayer = document.getElementById('textLayer');
+let textTimer = 0;
+
+function spawnFloatingText() {
+  const w = whispers[Math.floor(Math.random() * whispers.length)];
+  const el = document.createElement('div');
+  el.className = 'floating-text';
+  el.textContent = w.text;
+  el.style.fontSize = w.size;
+  el.style.fontWeight = w.weight;
+  el.style.color = w.color;
+  el.style.left = (5 + Math.random() * 80) + '%';
+  el.style.top = (20 + Math.random() * 60) + '%';
+  if (w.spacing) el.style.letterSpacing = w.spacing;
+  if (w.font) el.style.fontFamily = w.font;
+  el.style.transform += ` rotate(${(Math.random()-0.5)*8}deg)`;
+  textLayer.appendChild(el);
+  setTimeout(() => el.remove(), 12000);
+}
+
+function spawnTextBurst() {
+  for (let i = 0; i < 3; i++) {
+    setTimeout(() => spawnFloatingText(), i * 200);
+  }
+}
+
+// ─── Center Glitch Text ─────────────────────────────
+const glitchEl = document.getElementById('glitchCenter');
+let glitchTimer = 0;
+
+function updateGlitch() {
+  glitchTimer++;
+  if (glitchTimer % 300 === 0) {
+    const t = centerTexts[Math.floor(Math.random() * centerTexts.length)];
+    glitchEl.textContent = t;
+    glitchEl.style.animation = 'none';
+    glitchEl.offsetHeight; // reflow
+    glitchEl.style.animation = 'glitchPulse 8s ease-in-out infinite';
+  }
+}
+
+// ─── Dimension State ────────────────────────────────
+let dimension = 0;
+const dimColors = [
+  { bg: 0x000000, fog: 0x000011, accent: [0.6, 0.3, 0.8] },
+  { bg: 0x050000, fog: 0x110000, accent: [0.9, 0.2, 0.2] },
+  { bg: 0x000500, fog: 0x001100, accent: [0.2, 0.9, 0.5] },
+  { bg: 0x000005, fog: 0x000022, accent: [0.3, 0.5, 1.0] },
+  { bg: 0x050005, fog: 0x110011, accent: [0.8, 0.3, 0.9] },
 ];
 
-let currentPalette = 0;
-let paletteT = 0;
-
-function lerpPalette(t) {
-  const a = palettes[currentPalette];
-  const b = palettes[(currentPalette + 1) % palettes.length];
-  return a.map((c, i) => c.clone().lerp(b[i], t));
+function shiftDimension() {
+  dimension = (dimension + 1) % dimColors.length;
 }
 
-// ─── Noise (simplex-like) ────────────────────────────
-function hash(x, y) {
-  let h = x * 374761393 + y * 668265263;
-  h = (h ^ (h >> 13)) * 1274126177;
-  return (h ^ (h >> 16)) / 2147483648;
+// ─── Noise ──────────────────────────────────────────
+function hash(n) { return Math.sin(n) * 43758.5453 % 1; }
+function noise3D(x, y, z) {
+  const n = Math.floor(x) * 157 + Math.floor(y) * 113 + Math.floor(z) * 271;
+  return hash(n);
 }
 
-function noise2D(x, y) {
-  const ix = Math.floor(x), iy = Math.floor(y);
-  const fx = x - ix, fy = y - iy;
-  const sx = fx * fx * (3 - 2 * fx);
-  const sy = fy * fy * (3 - 2 * fy);
-  const a = hash(ix, iy), b = hash(ix + 1, iy);
-  const c = hash(ix, iy + 1), d = hash(ix + 1, iy + 1);
-  return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
-}
-
-function fbm(x, y, octaves = 4) {
-  let val = 0, amp = 0.5, freq = 1;
-  for (let i = 0; i < octaves; i++) {
-    val += amp * noise2D(x * freq, y * freq);
-    amp *= 0.5;
-    freq *= 2;
-  }
-  return val;
-}
-
-// ─── Animation ───────────────────────────────────────
+// ─── Animation ──────────────────────────────────────
 let time = 0;
 const clock = new THREE.Clock();
 
@@ -266,160 +400,166 @@ function animate() {
   requestAnimationFrame(animate);
   const dt = clock.getDelta();
   time += dt;
+  mouse.click *= 0.93;
 
-  // Palette cycling
-  paletteT += CONFIG.colorCycleSpeed * dt * 1000;
-  if (paletteT >= 1) {
-    paletteT = 0;
-    currentPalette = (currentPalette + 1) % palettes.length;
+  const dim = dimColors[dimension];
+  const accent = dim.accent;
+
+  // Text spawning
+  textTimer += dt;
+  if (textTimer > 3 + Math.random() * 4) {
+    spawnFloatingText();
+    textTimer = 0;
   }
-  const pal = lerpPalette(paletteT);
 
-  // Mouse velocity decay
-  mouse.vx *= CONFIG.mouseDecay;
-  mouse.vy *= CONFIG.mouseDecay;
-  mouse.click *= 0.95;
-
-  // Mouse world position
-  const mouseWorld = new THREE.Vector3(mouse.x, mouse.y, 0.5)
-    .unproject(camera);
-  const dir = mouseWorld.sub(camera.position).normalize();
-  const dist = -camera.position.y / dir.y;
-  const mouseGround = camera.position.clone().add(dir.multiplyScalar(dist));
-
-  // Explosion force
-  const clickForce = mouse.click * 8;
+  updateGlitch();
 
   // Update particles
-  const pos = particleGeo.attributes.position.array;
-  const col = particleGeo.attributes.color.array;
-  const half = CONFIG.fieldSize / 2;
+  const pp = pgeo.attributes.position.array;
+  const pc = pgeo.attributes.color.array;
 
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < PCOUNT; i++) {
     const i3 = i * 3;
-    const x = pos[i3];
-    const z = pos[i3 + 2];
-    const seed = seeds[i];
 
-    // Multi-layer wave
-    const wave1 = Math.sin(x * 0.15 + time * 0.8 + seed) * 1.5;
-    const wave2 = Math.cos(z * 0.12 + time * 0.6) * 1.2;
-    const wave3 = fbm(x * 0.05 + time * 0.2, z * 0.05 + time * 0.15) * 4;
-    let y = wave1 + wave2 + wave3;
+    // Orbital motion
+    const x = pp[i3], y = pp[i3+1], z = pp[i3+2];
+    const dist = Math.sqrt(x*x + y*y + z*z);
 
-    // Mouse interaction - ripple
-    const dx = x - mouseGround.x;
-    const dz = z - mouseGround.z;
-    const distToMouse = Math.sqrt(dx * dx + dz * dz);
+    // Gravitational spiral
+    const angle = Math.atan2(z, x) + 0.002 / (dist * 0.01 + 1);
+    const newR = dist + Math.sin(time + dist * 0.1) * 0.05;
+    pp[i3] = Math.cos(angle) * newR * Math.abs(x) / (dist || 1) + pvel[i3];
+    pp[i3+2] = Math.sin(angle) * newR * Math.abs(z) / (dist || 1) + pvel[i3+2];
+    pp[i3+1] += pvel[i3+1] + Math.sin(time * 0.5 + x * 0.1) * 0.01;
 
-    if (distToMouse < CONFIG.mouseInfluence) {
-      const influence = 1 - distToMouse / CONFIG.mouseInfluence;
-      const ripple = Math.sin(distToMouse * 1.5 - time * 6) * influence * 3;
-      y += ripple;
-
-      // Push on click
-      if (clickForce > 0.1) {
-        y += influence * clickForce * Math.sin(distToMouse * 0.5);
-      }
-
-      // Mouse velocity influence
-      const vel = Math.sqrt(mouse.vx * mouse.vx + mouse.vy * mouse.vy);
-      y += influence * vel * 0.5;
+    // Mouse attraction
+    const mx = mouse.x * 40, my = mouse.y * 30;
+    const mdx = mx - pp[i3], mdy = my - pp[i3+1];
+    const mdist = Math.sqrt(mdx*mdx + mdy*mdy);
+    if (mdist < 20) {
+      const force = (1 - mdist/20) * 0.03 * (mouse.down ? 3 : 1);
+      pp[i3] += mdx * force;
+      pp[i3+1] += mdy * force;
     }
 
-    pos[i3 + 1] = y;
+    // Click explosion
+    if (mouse.click > 0.1 && mdist < 30) {
+      const ef = mouse.click * (1 - mdist/30) * 2;
+      pvel[i3] += (pp[i3] - mx) * ef * 0.01;
+      pvel[i3+1] += (pp[i3+1] - my) * ef * 0.01;
+      pvel[i3+2] += (Math.random() - 0.5) * ef * 0.3;
+    }
 
-    // Color based on height + palette
-    const normalizedY = (y + 6) / 12;
-    const c = pal[0].clone()
-      .lerp(pal[1], Math.max(0, Math.min(1, normalizedY)))
-      .lerp(pal[2], Math.max(0, Math.min(1, normalizedY * normalizedY)));
+    // Velocity damping
+    pvel[i3] *= 0.98;
+    pvel[i3+1] *= 0.98;
+    pvel[i3+2] *= 0.98;
+
+    // Reset if too far
+    if (dist > 100) resetParticle(i);
+
+    // Color
+    plife[i] += 0.001;
+    const life = (Math.sin(plife[i] * 3 + dist * 0.05) + 1) * 0.5;
+    pc[i3] = accent[0] * life * 0.8;
+    pc[i3+1] = accent[1] * life * 0.6;
+    pc[i3+2] = accent[2] * life;
 
     // Brighten near mouse
-    if (distToMouse < CONFIG.mouseInfluence) {
-      const glow = (1 - distToMouse / CONFIG.mouseInfluence) * 0.5;
-      c.r = Math.min(1, c.r + glow);
-      c.g = Math.min(1, c.g + glow);
-      c.b = Math.min(1, c.b + glow);
+    if (mdist < 15) {
+      const g = (1 - mdist/15) * 0.4;
+      pc[i3] = Math.min(1, pc[i3] + g);
+      pc[i3+1] = Math.min(1, pc[i3+1] + g);
+      pc[i3+2] = Math.min(1, pc[i3+2] + g);
     }
-
-    col[i3] = c.r;
-    col[i3 + 1] = c.g;
-    col[i3 + 2] = c.b;
   }
 
-  particleGeo.attributes.position.needsUpdate = true;
-  particleGeo.attributes.color.needsUpdate = true;
+  pgeo.attributes.position.needsUpdate = true;
+  pgeo.attributes.color.needsUpdate = true;
 
-  // Update ribbons
-  ribbons.forEach(rb => {
-    const posArr = rb.geo.attributes.position.array;
-    for (let i = 0; i < rb.segments; i++) {
-      const t = i / rb.segments;
-      const angle = t * Math.PI * 2 * 3 + time * rb.speed + rb.offset;
-      const r = rb.radius * (0.3 + t * 0.7);
-      const x = Math.cos(angle) * r;
-      const z = Math.sin(angle) * r;
-      const y = Math.sin(t * Math.PI * rb.yFreq + time * rb.speed * 2) * rb.yAmp + 5;
+  // Monoliths float
+  monoliths.forEach(m => {
+    m.mesh.position.y = m.baseY + Math.sin(time * m.speed) * 3;
+    m.mesh.rotation.y += 0.001;
+    m.wireframe.position.copy(m.mesh.position);
+    m.wireframe.rotation.copy(m.mesh.rotation);
 
-      posArr[i * 3] = x;
-      posArr[i * 3 + 1] = y;
-      posArr[i * 3 + 2] = z;
-    }
-    rb.geo.attributes.position.needsUpdate = true;
-
-    // Update ribbon color with palette
-    const hue = (rb.hue + time * 0.02) % 1;
-    rb.line.material.color.setHSL(hue, 0.5, 0.4);
-    rb.line.material.opacity = 0.08 + mouse.click * 0.15;
+    // Pulse wireframe on click
+    const o = 0.3 + mouse.click * 0.5;
+    m.wireframe.material.opacity = o;
+    m.wireframe.material.color.setHSL(
+      (time * 0.05 + m.angle) % 1,
+      0.3 + mouse.click * 0.5,
+      0.3 + mouse.click * 0.3
+    );
   });
 
-  // Orb pulse
-  const orbScale = 1 + Math.sin(time * 2) * 0.2 + mouse.click * 2;
-  orb.scale.setScalar(orbScale);
-  orb.material.opacity = 0.3 + Math.sin(time * 3) * 0.15 + mouse.click * 0.5;
-  const orbColor = pal[1].clone().lerp(new THREE.Color(0xffffff), 0.5);
-  orb.material.color.copy(orbColor);
-
-  // Rings
-  scene.children.forEach(child => {
-    if (child.userData && child.userData.index) {
-      const i = child.userData.index;
-      child.scale.setScalar(1 + Math.sin(time * 1.5 + i) * 0.3 + mouse.click * i);
-      child.material.opacity = (0.08 / i) + mouse.click * 0.05;
-      child.rotation.z = time * 0.1 * (i % 2 ? 1 : -1);
-    }
+  // Rings rotate
+  rings.forEach((r, i) => {
+    r.mesh.rotation.x += r.rotSpeed.x + mouse.click * 0.02;
+    r.mesh.rotation.y += r.rotSpeed.y;
+    r.mesh.rotation.z += r.rotSpeed.z;
+    r.mesh.material.opacity = 0.06 + Math.sin(time + i) * 0.03 + mouse.click * 0.1;
+    r.mesh.material.color.setHSL(
+      (time * 0.03 + i * 0.15 + dimension * 0.2) % 1,
+      0.4,
+      0.3
+    );
   });
 
-  // Camera orbit
-  const camAngle = time * 0.05;
-  const camRadius = 50 + Math.sin(time * 0.1) * 5;
-  const camY = 25 + Math.sin(time * 0.08) * 8;
-  camera.position.set(
-    Math.cos(camAngle) * camRadius,
-    camY,
-    Math.sin(camAngle) * camRadius
-  );
-  camera.lookAt(0, 3, 0);
+  // Neural web - connect nearby particles
+  const wp = webGeo.attributes.position.array;
+  const wc = webGeo.attributes.color.array;
+  let wi = 0;
+  const stride = Math.floor(PCOUNT / 200);
+  for (let i = 0; i < PCOUNT && wi < 598; i += stride) {
+    for (let j = i + stride; j < PCOUNT && wi < 598; j += stride * 3) {
+      const i3 = i*3, j3 = j*3;
+      const dx = pp[i3]-pp[j3], dy = pp[i3+1]-pp[j3+1], dz = pp[i3+2]-pp[j3+2];
+      const d = dx*dx + dy*dy + dz*dz;
+      if (d < 100) {
+        const a = 1 - d/100;
+        wp[wi*3] = pp[i3]; wp[wi*3+1] = pp[i3+1]; wp[wi*3+2] = pp[i3+2];
+        wc[wi*3] = accent[0]*a; wc[wi*3+1] = accent[1]*a; wc[wi*3+2] = accent[2]*a;
+        wi++;
+        wp[wi*3] = pp[j3]; wp[wi*3+1] = pp[j3+1]; wp[wi*3+2] = pp[j3+2];
+        wc[wi*3] = accent[0]*a; wc[wi*3+1] = accent[1]*a; wc[wi*3+2] = accent[2]*a;
+        wi++;
+      }
+    }
+  }
+  // Zero out unused
+  for (let i = wi*3; i < webPositions.length; i++) { wp[i] = 0; wc[i] = 0; }
+  webGeo.attributes.position.needsUpdate = true;
+  webGeo.attributes.color.needsUpdate = true;
+
+  // Camera
+  const camT = time * 0.08;
+  const camR = 55 + Math.sin(time * 0.05) * 10;
+  camera.position.x += (Math.cos(camT) * camR - camera.position.x) * 0.01;
+  camera.position.z += (Math.sin(camT) * camR - camera.position.z) * 0.01;
+  camera.position.y += (15 + Math.sin(time * 0.1) * 10 + mouse.y * 10 - camera.position.y) * 0.02;
+  camera.lookAt(0, mouse.y * 5, 0);
 
   renderer.render(scene, camera);
 }
 
 animate();
 
-// ─── Resize ──────────────────────────────────────────
-window.addEventListener('resize', () => {
+// Initial text spawns
+setTimeout(() => spawnFloatingText(), 2000);
+setTimeout(() => spawnFloatingText(), 4000);
+setTimeout(() => spawnFloatingText(), 5500);
+
+// Glitch init
+glitchEl.textContent = centerTexts[0];
+
+// Resize
+addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
 });
-
-// ─── Click palette shift ─────────────────────────────
-document.addEventListener('click', () => {
-  paletteT = 0;
-  currentPalette = (currentPalette + 1) % palettes.length;
-});
-
 </script>
 </body>
 </html>
